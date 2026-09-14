@@ -9,6 +9,9 @@ import { Variant } from "@/data/catalog";
 
 interface OrderFormProps {
   productId: string;
+  // Catalog group id — the price actually charged is recomputed
+  // server-side from this, never trusted from the `price` prop below.
+  groupId: string;
   productName: string;
   price: number;
   // Variant/color props — optional for backwards compat
@@ -27,7 +30,7 @@ interface FormValues {
 }
 
 export default function OrderForm({
-  productId, productName, price,
+  productId, groupId, productName, price,
   color, variants, selectedVariantId, onVariantChange,
 }: OrderFormProps) {
   const [loading, setLoading] = useState(false);
@@ -59,42 +62,42 @@ export default function OrderForm({
     setError(null);
 
     try {
-      const { createOrder } = await import("@/lib/orders");
-      const orderId = await createOrder({
+      const { submitOrder } = await import("@/lib/orders");
+      const { orderId, price: confirmedPrice } = await submitOrder({
+        groupId,
+        variantId: selectedVariantId ?? "",
         name: data.name.trim(),
         phone: data.phone.trim(),
         address: data.address.trim(),
         city: data.city.trim(),
-        productId,
-        productName: effectiveName,
-        price,
         quantity: Number(data.quantity),
       });
+      const confirmedTotal = confirmedPrice * quantity;
 
       const hashedPhone = await sha256(data.phone.trim());
-      if (typeof window !== "undefined" && (window as any).ttq) {
-        (window as any).ttq.identify({ phone_number: hashedPhone });
+      if (typeof window !== "undefined" && window.ttq) {
+        window.ttq.identify({ phone_number: hashedPhone });
       }
       const contents = [{
         content_id: productId,
         content_type: "product",
         content_name: effectiveName,
-        price,
+        price: confirmedPrice,
         num_items: quantity,
       }];
       const userData = { phone: hashedPhone };
-      await trackEvent("InitiateCheckout", { contents, value: total, currency: "PKR" }, userData);
-      await trackEvent("PlaceAnOrder",     { contents, value: total, currency: "PKR" }, userData);
-      await trackEvent("Purchase",         { contents, value: total, currency: "PKR" }, userData);
+      await trackEvent("InitiateCheckout", { contents, value: confirmedTotal, currency: "PKR" }, userData);
+      await trackEvent("PlaceAnOrder",     { contents, value: confirmedTotal, currency: "PKR" }, userData);
+      await trackEvent("Purchase",         { contents, value: confirmedTotal, currency: "PKR" }, userData);
 
       setSubmitted(true);
 
       const number = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "923000000000";
       const msg = encodeURIComponent(
-        `Assalam o Alaikum! I just placed a COD order for *${effectiveName}* (Qty: ${quantity}) — Rs. ${total.toLocaleString()}.\n\nName: ${data.name}\nPhone: ${data.phone}\n\nPlease confirm. 🙏`
+        `Assalam o Alaikum! I just placed a COD order for *${effectiveName}* (Qty: ${quantity}) — Rs. ${confirmedTotal.toLocaleString()}.\n\nName: ${data.name}\nPhone: ${data.phone}\n\nPlease confirm. 🙏`
       );
 
-      router.push(`/thankyou?value=${total}&order_id=${orderId}`);
+      router.push(`/thankyou?value=${confirmedTotal}&order_id=${orderId}`);
       setTimeout(() => window.open(`https://wa.me/${number}?text=${msg}`, "_blank"), 1200);
     } catch {
       setError("Something went wrong. Please try again or contact us on WhatsApp.");

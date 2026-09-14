@@ -13,8 +13,8 @@ function ThankYouContent() {
   useEffect(() => {
     // PlaceAnOrder + Purchase already fired in the order form before redirect
     // Fire ttq.page() to register the thank-you page view
-    if (typeof window !== "undefined" && (window as any).ttq) {
-      (window as any).ttq.page();
+    if (typeof window !== "undefined" && window.ttq) {
+      window.ttq.page();
     }
   }, [value, orderId]);
 

@@ -3,12 +3,17 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Orders ───────────────────────────────────────────────────────────────
-    // Anyone can create (public order form).
-    // Only authenticated admins can read, update, or delete.
+    // Public customer orders are written by netlify/functions/create-order.js
+    // using firebase-admin (which bypasses these rules and recomputes the
+    // price server-side from the catalog, so it never trusts a client-sent
+    // price). The only client-side writer left is the authenticated admin
+    // dashboard's manual-order form, so direct client creates now require
+    // an authenticated admin — anonymous clients can no longer write
+    // arbitrary price/order data straight into Firestore.
     match /orders/{orderId} {
-      allow create: if
+      allow create: if request.auth != null
         // required fields must be present
-        request.resource.data.keys().hasAll([
+        && request.resource.data.keys().hasAll([
           'name', 'phone', 'address', 'city',
           'productId', 'productName', 'price', 'quantity',
           'status', 'createdAt'

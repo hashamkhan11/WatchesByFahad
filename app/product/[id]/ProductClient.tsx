@@ -318,6 +318,8 @@ export default function ProductClient({ group }: { group: ProductGroup }) {
     // Build a Product-compatible object for the cart
     addItem({
       id: `${group.id}-${variant.id}`,
+      groupId: group.id,
+      variantId: variant.id,
       name: `${group.fullName} — ${variant.name}`,
       price: group.price,
       originalPrice: group.originalPrice,
@@ -467,6 +469,7 @@ export default function ProductClient({ group }: { group: ProductGroup }) {
               </p>
               <OrderForm
                 productId={`${group.id}-${variant.id}`}
+                groupId={group.id}
                 productName={`${group.fullName} — ${variant.name}`}
                 price={group.price}
                 color={variant.name}

@@ -11,6 +11,10 @@ import { trackEvent } from "@/lib/tiktok";
 // checkout UI need, independent of the catalog's own richer types.
 export interface Product {
   id: string;
+  // Catalog identifiers — used to recompute the real price server-side at
+  // checkout instead of trusting this object's price field (see lib/orders.ts).
+  groupId: string;
+  variantId: string;
   name: string;
   price: number;
   originalPrice: number;

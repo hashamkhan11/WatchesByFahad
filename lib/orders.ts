@@ -46,7 +46,10 @@ export interface Order extends OrderData {
 }
 
 /**
- * Save a new COD order to Firestore
+ * Save a new COD order to Firestore directly. Only used by the
+ * authenticated admin dashboard's manual-order form, where the price
+ * is already read from the catalog and the caller is a signed-in admin.
+ * Public, customer-facing checkout must use submitOrder() below instead.
  */
 export async function createOrder(data: OrderData): Promise<string> {
   const docRef = await addDoc(collection(db, "orders"), {
@@ -55,6 +58,50 @@ export async function createOrder(data: OrderData): Promise<string> {
     createdAt: serverTimestamp(),
   });
   return docRef.id;
+}
+
+export interface PublicOrderInput {
+  groupId: string;
+  variantId: string;
+  name: string;
+  phone: string;
+  address: string;
+  city: string;
+  quantity: number;
+  note?: string;
+}
+
+export interface PublicOrderResult {
+  orderId: string;
+  price: number;
+  productName: string;
+}
+
+/**
+ * Places a customer-facing COD order through the create-order function,
+ * which looks up the real price from the catalog on the server and
+ * writes the order itself — the browser never gets to say what the
+ * price is, only which product/variant and how many.
+ */
+export async function submitOrder(input: PublicOrderInput): Promise<PublicOrderResult> {
+  const res = await fetch("/.netlify/functions/create-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  let data: { ok?: boolean; error?: string; orderId?: string; price?: number; productName?: string };
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("Failed to place order");
+  }
+
+  if (!res.ok || !data.ok || !data.orderId) {
+    throw new Error(data.error || "Failed to place order");
+  }
+
+  return { orderId: data.orderId, price: data.price!, productName: data.productName! };
 }
 
 /**

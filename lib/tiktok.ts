@@ -21,8 +21,8 @@ export async function trackEvent(
 ) {
   const eventId = crypto.randomUUID();
 
-  if (typeof window !== "undefined" && (window as any).ttq) {
-    (window as any).ttq.track(eventName, { ...properties, event_id: eventId });
+  if (typeof window !== "undefined" && window.ttq) {
+    window.ttq.track(eventName, { ...properties, event_id: eventId });
   }
 
   try {

@@ -29,34 +29,37 @@ export default function CartDrawer() {
     setLoading(true);
 
     try {
-      const { createOrder } = await import("@/lib/orders");
+      const { submitOrder } = await import("@/lib/orders");
 
       const orderIds: string[] = [];
+      let confirmedTotal = 0;
+      const confirmedPrices: Record<string, number> = {};
       for (const item of items) {
-        const id = await createOrder({
+        const result = await submitOrder({
+          groupId: item.product.groupId,
+          variantId: item.product.variantId,
           name: data.name.trim(),
           phone: data.phone.trim(),
           address: data.address.trim(),
           city: data.city.trim(),
-          productId: item.product.id,
-          productName: item.product.name,
-          price: item.product.price,
           quantity: item.quantity,
         });
-        orderIds.push(id);
+        orderIds.push(result.orderId);
+        confirmedPrices[item.product.id] = result.price;
+        confirmedTotal += result.price * item.quantity;
       }
 
       const hashedPhone = await sha256(data.phone.trim());
-      if (typeof window !== "undefined" && (window as any).ttq) {
-        (window as any).ttq.identify({ phone_number: hashedPhone });
+      if (typeof window !== "undefined" && window.ttq) {
+        window.ttq.identify({ phone_number: hashedPhone });
       }
       const contents = items.map((i) => ({
         content_id: i.product.id, content_type: "product",
-        content_name: i.product.name, price: i.product.price, num_items: i.quantity,
+        content_name: i.product.name, price: confirmedPrices[i.product.id] ?? i.product.price, num_items: i.quantity,
       }));
       const userData = { phone: hashedPhone };
-      await trackEvent("PlaceAnOrder", { contents, value: totalPrice, currency: "PKR" }, userData);
-      await trackEvent("Purchase",     { contents, value: totalPrice, currency: "PKR" }, userData);
+      await trackEvent("PlaceAnOrder", { contents, value: confirmedTotal, currency: "PKR" }, userData);
+      await trackEvent("Purchase",     { contents, value: confirmedTotal, currency: "PKR" }, userData);
 
       clearCart();
       reset();
@@ -69,11 +72,11 @@ export default function CartDrawer() {
         .map((i) => `• ${i.product.name} × ${i.quantity}`)
         .join("\n");
       const msg = encodeURIComponent(
-        `Assalam o Alaikum! I just placed a COD order:\n\n${itemsList}\n\nTotal: Rs. ${totalPrice.toLocaleString()}\nName: ${data.name}\nPhone: ${data.phone}\n\nPlease confirm. 🙏`
+        `Assalam o Alaikum! I just placed a COD order:\n\n${itemsList}\n\nTotal: Rs. ${confirmedTotal.toLocaleString()}\nName: ${data.name}\nPhone: ${data.phone}\n\nPlease confirm. 🙏`
       );
 
       // Redirect to thank you, pass value for pixel
-      router.push(`/thankyou?value=${totalPrice}&order_id=${orderIds[0] ?? ""}`);
+      router.push(`/thankyou?value=${confirmedTotal}&order_id=${orderIds[0] ?? ""}`);
 
       setTimeout(() => {
         window.open(`https://wa.me/${number}?text=${msg}`, "_blank");
