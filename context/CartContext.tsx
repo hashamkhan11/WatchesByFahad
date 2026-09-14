@@ -4,8 +4,26 @@ import {
   createContext, useContext, useState,
   useCallback, ReactNode
 } from "react";
-import { Product } from "@/data/products";
 import { trackEvent } from "@/lib/tiktok";
+
+// Cart items are built from catalog ProductGroup/Variant data (see
+// data/catalog.ts) at add-to-cart time — this shape is what the cart and
+// checkout UI need, independent of the catalog's own richer types.
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice: number;
+  images: string[];
+  description: string;
+  shortDescription: string;
+  features: string[];
+  badge?: string;
+  stock: number;
+  orders24h: number;
+  rating: number;
+  reviewCount: number;
+}
 
 export interface CartItem {
   product: Product;
