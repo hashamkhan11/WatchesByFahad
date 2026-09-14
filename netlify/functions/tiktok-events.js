@@ -62,10 +62,19 @@ exports.handler = async (event) => {
     });
 
     const data = await res.json();
-    console.log("TikTok response:", JSON.stringify(data));
-    console.log("Payload sent:", JSON.stringify(payload));
+    // Log only what's useful for debugging delivery — never the request/
+    // response bodies themselves, which carry the customer's IP, hashed
+    // phone, and other identifiers.
+    console.log("TikTok event forwarded:", {
+      event: eventName,
+      event_id,
+      status: res.status,
+      code: data?.code,
+      message: data?.message,
+    });
     return { statusCode: 200, body: JSON.stringify({ ok: true, tiktok: data }) };
   } catch (err) {
+    console.error("TikTok event failed:", { event: eventName, event_id, error: String(err) });
     return { statusCode: 500, body: JSON.stringify({ ok: false, error: String(err) }) };
   }
 };
