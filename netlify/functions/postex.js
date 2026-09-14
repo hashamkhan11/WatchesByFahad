@@ -1,19 +1,40 @@
 /**
  * PostEx API proxy — keeps the API token server-side.
  * Actions: book | track | track-bulk | cancel | shipper-advice | payment-status | awb | addresses
+ *
+ * All actions here manage real courier shipments and merchant data, so every
+ * request must carry a valid Firebase ID token for the admin account.
  */
 
+const { createRemoteJWKSet, jwtVerify } = require("jose");
+
 const BASE = "https://api.postex.pk/services/integration/api";
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || "https://watchesbyfahad.com";
+const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
 const HEADERS = () => ({
   "Content-Type": "application/json",
   token: process.env.POSTEX_API_TOKEN,
 });
 
+const JWKS = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com")
+);
+
+async function verifyAdmin(event) {
+  const header = event.headers.authorization || event.headers.Authorization || "";
+  const idToken = header.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!idToken || !PROJECT_ID) throw new Error("Missing token");
+  await jwtVerify(idToken, JWKS, {
+    issuer: `https://securetoken.google.com/${PROJECT_ID}`,
+    audience: PROJECT_ID,
+  });
+}
+
 exports.handler = async (event) => {
   const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Origin": SITE_ORIGIN,
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
 
@@ -22,10 +43,15 @@ exports.handler = async (event) => {
   }
 
   const token = process.env.POSTEX_API_TOKEN;
-  const pickupCity = process.env.POSTEX_PICKUP_CITY || "Faisalabad";
 
   if (!token) {
     return { statusCode: 500, headers: cors, body: JSON.stringify({ ok: false, error: "Missing POSTEX_API_TOKEN" }) };
+  }
+
+  try {
+    await verifyAdmin(event);
+  } catch {
+    return { statusCode: 401, headers: cors, body: JSON.stringify({ ok: false, error: "Unauthorized" }) };
   }
 
   const params = event.queryStringParameters || {};

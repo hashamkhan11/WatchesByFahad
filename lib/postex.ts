@@ -1,4 +1,7 @@
-// Client-side PostEx helpers — all calls go through the Netlify function proxy
+// Client-side PostEx helpers — all calls go through the Netlify function proxy,
+// which requires a valid admin Firebase ID token on every action.
+
+import { auth } from "@/lib/firebase";
 
 export const POSTEX_STATUS: Record<string, { en: string; ur: string; step: number; color: string }> = {
   "0001": { en: "Order Booked",         ur: "آرڈر بک ہو گیا",           step: 1, color: "blue"   },
@@ -35,6 +38,12 @@ export const POSTEX_TO_ORDER_STATUS: Record<string, import("./orders").OrderStat
 
 const API = "/.netlify/functions/postex";
 
+async function authHeaders(): Promise<Record<string, string> | null> {
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) return null;
+  return { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` };
+}
+
 export async function postexBook(order: {
   orderId: string;
   name: string;
@@ -45,9 +54,11 @@ export async function postexBook(order: {
   price: number;
   quantity: number;
 }): Promise<{ ok: boolean; trackingNumber?: string; error?: string; raw?: unknown }> {
+  const headers = await authHeaders();
+  if (!headers) return { ok: false, error: "Not signed in" };
   const res = await fetch(`${API}?action=book`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(order),
   });
   const json = await res.json();
@@ -56,22 +67,28 @@ export async function postexBook(order: {
 }
 
 export async function postexTrack(cn: string): Promise<{ ok: boolean; data?: unknown; error?: string }> {
-  const res = await fetch(`${API}?action=track&cn=${encodeURIComponent(cn)}`);
+  const headers = await authHeaders();
+  if (!headers) return { ok: false, error: "Not signed in" };
+  const res = await fetch(`${API}?action=track&cn=${encodeURIComponent(cn)}`, { headers });
   const json = await res.json();
   return { ok: json.ok, data: json.data, error: json.error };
 }
 
 export async function postexTrackBulk(cns: string[]): Promise<{ cn: string; ok: boolean; data?: unknown }[]> {
   if (!cns.length) return [];
-  const res = await fetch(`${API}?action=track-bulk&cns=${encodeURIComponent(cns.join(","))}`);
+  const headers = await authHeaders();
+  if (!headers) return [];
+  const res = await fetch(`${API}?action=track-bulk&cns=${encodeURIComponent(cns.join(","))}`, { headers });
   const json = await res.json();
   return json.results || [];
 }
 
 export async function postexCancel(cn: string): Promise<{ ok: boolean; error?: string }> {
+  const headers = await authHeaders();
+  if (!headers) return { ok: false, error: "Not signed in" };
   const res = await fetch(`${API}?action=cancel`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ cn }),
   });
   const json = await res.json();
@@ -79,16 +96,20 @@ export async function postexCancel(cn: string): Promise<{ ok: boolean; error?: s
 }
 
 export async function postexAWB(cns: string[]): Promise<{ ok: boolean; pdfUrl?: string; error?: string }> {
-  const res = await fetch(`${API}?action=awb&cns=${encodeURIComponent(cns.join(","))}`);
+  const headers = await authHeaders();
+  if (!headers) return { ok: false, error: "Not signed in" };
+  const res = await fetch(`${API}?action=awb&cns=${encodeURIComponent(cns.join(","))}`, { headers });
   const json = await res.json();
   const pdfUrl = json?.data?.dist?.invoiceUrl || json?.data?.invoiceUrl;
   return { ok: json.ok, pdfUrl, error: json.error };
 }
 
 export async function postexShipperAdvice(cn: string, statusId: 1 | 2): Promise<{ ok: boolean; error?: string }> {
+  const headers = await authHeaders();
+  if (!headers) return { ok: false, error: "Not signed in" };
   const res = await fetch(`${API}?action=shipper-advice`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ cn, statusId }),
   });
   const json = await res.json();
@@ -96,7 +117,9 @@ export async function postexShipperAdvice(cn: string, statusId: 1 | 2): Promise<
 }
 
 export async function postexPaymentStatus(cn: string): Promise<{ ok: boolean; settled?: boolean; amount?: number; error?: string }> {
-  const res = await fetch(`${API}?action=payment-status&cn=${encodeURIComponent(cn)}`);
+  const headers = await authHeaders();
+  if (!headers) return { ok: false, error: "Not signed in" };
+  const res = await fetch(`${API}?action=payment-status&cn=${encodeURIComponent(cn)}`, { headers });
   const json = await res.json();
   const d = json?.data?.dist || json?.data;
   return { ok: json.ok, settled: d?.settle, amount: d?.amount, error: json.error };
