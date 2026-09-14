@@ -32,7 +32,7 @@ function ThankYouContent() {
             Order Received
           </h1>
           <p className="text-sm text-gray-500 leading-relaxed">
-            Thank you for your order. We'll confirm everything on WhatsApp shortly and get it delivered to your door.
+            Thank you for your order. We&apos;ll confirm everything on WhatsApp shortly and get it delivered to your door.
           </p>
         </div>
 

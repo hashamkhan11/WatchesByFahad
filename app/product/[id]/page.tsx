@@ -124,7 +124,7 @@ export default function ProductPage({ params }: PageProps) {
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#C4976A] mb-3">{group.categoryId.toUpperCase()}</p>
           <h1 className="font-display text-4xl font-semibold text-gray-900 mb-3">{group.name}</h1>
-          <p className="text-gray-400 text-sm mb-8">We're finishing the photos. Check back soon.</p>
+          <p className="text-gray-400 text-sm mb-8">We&apos;re finishing the photos. Check back soon.</p>
           <a href="/" className="btn-primary px-8 py-3 text-sm">Back to Collection</a>
         </div>
       </div>
