@@ -6,6 +6,7 @@ import Image from "next/image";
 import { CheckCircle2, Shield, Truck, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductGroup, Variant, getVariant, getGroupById, catalog } from "@/data/catalog";
 import { trackEvent } from "@/lib/tiktok";
+import { calculateDiscountPercent } from "@/lib/pricing";
 import { useCart } from "@/context/CartContext";
 import OrderForm from "@/components/OrderForm";
 import ReviewsSection from "@/components/ReviewsSection";
@@ -250,9 +251,7 @@ function CrossSell({ currentGroupId }: { currentGroupId: string }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {items.map(({ group, variant: v }) => {
           const image = v.cardImage ?? v.images[0];
-          const discount = Math.round(
-            ((group.originalPrice - group.price) / group.originalPrice) * 100
-          );
+          const discount = calculateDiscountPercent(group.originalPrice, group.price);
 
           return (
             <a
@@ -310,7 +309,7 @@ export default function ProductClient({ group }: { group: ProductGroup }) {
   );
 
   const variant = getVariant(group, selectedVariantId);
-  const discount = Math.round(((group.originalPrice - group.price) / group.originalPrice) * 100);
+  const discount = calculateDiscountPercent(group.originalPrice, group.price);
   const { addItem } = useCart();
   const [cartAdded, setCartAdded] = useState(false);
 

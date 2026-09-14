@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Static export prerenders /admin and /admin/dashboard, which
+          # initialize the Firebase client SDK at build time. CI has no
+          # real project to talk to, so these are syntactically valid
+          # placeholders — not real credentials — just enough for the
+          # build to complete. The site's actual keys live in Netlify's
+          # environment, not here.
+          NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyDUMMYDUMMYDUMMYDUMMYDUMMYDUMMY00
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder.appspot.com
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "123456789012"
+          NEXT_PUBLIC_FIREBASE_APP_ID: "1:123456789012:web:deadbeefdeadbeefdeadbe"
+          NEXT_PUBLIC_WHATSAPP_NUMBER: "923000000000"
+          NEXT_PUBLIC_TIKTOK_PIXEL_ID: CIPLACEHOLDERID

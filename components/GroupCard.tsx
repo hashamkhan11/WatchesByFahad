@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductGroup } from "@/data/catalog";
+import { calculateDiscountPercent } from "@/lib/pricing";
 
 const BADGE_STYLE: Record<string, string> = {
   "Eid Sale":       "border-amber-500 text-amber-800",
@@ -36,9 +37,7 @@ export default function GroupCard({
   const displayVariant =
     group.variants.find((v) => v.id === displayId) ?? group.variants[0];
 
-  const discount = Math.round(
-    ((group.originalPrice - group.price) / group.originalPrice) * 100
-  );
+  const discount = calculateDiscountPercent(group.originalPrice, group.price);
   const href = `/product/${group.id}/?color=${activeId}`;
   const badge = group.badge ?? displayVariant?.badge;
 

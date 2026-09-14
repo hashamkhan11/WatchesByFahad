@@ -9,6 +9,7 @@
 const { initializeApp, getApps, cert } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getGroupById, getVariant } = require("../../data/catalog");
+const { isValidQuantity } = require("../../lib/pricing");
 
 if (!getApps().length) {
   const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -16,7 +17,6 @@ if (!getApps().length) {
 }
 
 const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || "https://watchesbyfahad.com";
-const MAX_QUANTITY = 20;
 
 function badRequest(cors, error) {
   return { statusCode: 400, headers: cors, body: JSON.stringify({ ok: false, error }) };
@@ -53,7 +53,7 @@ exports.handler = async (event) => {
   const variant = getVariant(group, typeof variantId === "string" ? variantId : "");
 
   const qty = Number.parseInt(quantity, 10);
-  if (!Number.isInteger(qty) || qty < 1 || qty > MAX_QUANTITY) {
+  if (!isValidQuantity(qty)) {
     return badRequest(cors, "Invalid quantity");
   }
 
